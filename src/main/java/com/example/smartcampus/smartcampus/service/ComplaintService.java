@@ -1,0 +1,29 @@
+package com.example.smartcampus.smartcampus.service;
+
+import com.example.smartcampus.smartcampus.dtos.*;
+import com.example.smartcampus.smartcampus.entity.Complaint;
+import com.example.smartcampus.smartcampus.entity.ComplaintPriority;
+import com.example.smartcampus.smartcampus.entity.ComplaintStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
+public interface ComplaintService {
+    ComplaintResponseDto createComplaint(ComplaintRequestDto complaintRequestDto);
+    Page<ComplaintResponseDto> getMyComplaints(Pageable pageable);
+    ComplaintResponseDto getComplaintById(Long id);
+    ComplaintResponseDto updateComplaintStatus(Long id,UpdateComplaintStatusDto updateComplaintStatusDto);
+    ComplaintResponseDto updateComplaintPriority(Long id, UpdateComplaintPriorityDto updateComplaintPriorityDto);
+    Page<ComplaintResponseDto> getAllComplaints(Pageable pageable);
+    Page<ComplaintResponseDto> getAllComplaintsByStatus(ComplaintStatus complaintStatus,Pageable pageable);
+    Page<ComplaintResponseDto> getAllComplaintsByPriority(ComplaintPriority complaintPriority,Pageable pageable);
+    DashBoardStatsResponseDto getDashboardStats();
+    ComplaintResponseDto assignComplaint(Long complaintId,AssignComplaintDto assignComplaintDto);
+    Page<ComplaintResponseDto> getAllComplaintsByAssignedTo(Pageable pageable);
+    Page<ComplaintResponseDto> searchComplaints(String keyword,Pageable pageable);
+  Page<ComplaintHistoryResponseDto> getComplaintHistory(Long complaintId,Pageable pageable);
+  StaffDashBoardDto getStaffDashboard();
+  StudentDashBoardDto getStudentDashboard();
+    ComplaintResponseDto getMyAssignedComplaint(Long id);
+    Page<ComplaintResponseDto> filterComplaints(String keyword,ComplaintStatus status,ComplaintPriority priority,Pageable pageable);
+}

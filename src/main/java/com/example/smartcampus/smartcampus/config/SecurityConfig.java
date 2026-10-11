@@ -1,3 +1,4 @@
+
 package com.example.smartcampus.smartcampus.config;
 
 import com.example.smartcampus.smartcampus.service.JwtAuthenticationFilter;
@@ -22,37 +23,72 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationProvider authenticationProvider;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.csrf( csrf->csrf.disable())
-                .cors(cors->{})
-                .authorizeHttpRequests((request)->request.requestMatchers("/api/users/register","/api/users/login","/api/users/verifyOtp","/api/users/forgotPassword","/api/users/resetPassword","/v3/api-docs/**",
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity httpSecurity) throws Exception {
+
+        httpSecurity
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .authorizeHttpRequests(request -> request
+                        .requestMatchers(
+                                "/api/test",
+                                "/api/users/register",
+                                "/api/users/login",
+                                "/api/users/verifyOtp",
+                                "/api/users/forgotPassword",
+                                "/api/users/resetPassword",
+                                "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html").permitAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
                 .authenticationProvider(authenticationProvider);
+
         return httpSecurity.build();
-
-
     }
+
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(){
-        CorsConfiguration configuration=new CorsConfiguration();
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
         configuration.setAllowedOrigins(List.of(
-    "http://localhost:5173",
-    "https://student-complaint-frontend.vercel.app"
-));
-        configuration.setAllowedMethods(List.of("*"));
+                "http://localhost:5173",
+                "https://student-complaint-frontend.vercel.app"
+        ));
+
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**",configuration);
-        return  source;
 
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
     }
-
 }

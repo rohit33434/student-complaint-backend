@@ -27,11 +27,11 @@ public class OtpVerification {
     private User user;
     @PrePersist
     public void createdAt(){
-        this.createdAt=LocalDateTime.now();
-        this.expiryTime=createdAt.plusMinutes(5);
-    }
-    @PreUpdate
-    public void updateAt(){
-        this.expiryTime=LocalDateTime.now().plusMinutes(5);
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.expiryTime == null) {
+            this.expiryTime = createdAt.plusMinutes(5);
+        }
     }
 }

@@ -12,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -93,7 +91,7 @@ private final EmailService emailService;
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
         User currentUser=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Found"));
         Complaint complaint=complaintRepo.findById(id).orElseThrow(()->new RuntimeException("No Complaint with given id: "+id));
-       if(!currentUser.getId().equals(complaint.getAssignedTo().getId())){
+       if(complaint.getAssignedTo() == null || !currentUser.getId().equals(complaint.getAssignedTo().getId())){
             throw new RuntimeException("UnAuthorized Access");
         }
 
@@ -200,7 +198,13 @@ complaint.setComplaintPriority(updateComplaintPriorityDto.getComplaintPriority()
         }
         complaint.setAssignedTo(staff);
         Complaint savedComplaint=complaintRepo.save(complaint);
-        emailService.sendComplaintAssignNotify(complaint,staff.getEmail());
+
+        try {
+            emailService.sendComplaintAssignNotify(savedComplaint, staff.getEmail());
+        } catch (RuntimeException ex) {
+            // Keep the assignment saved but do not fail the complaint assignment workflow.
+        }
+
         saveHistory(savedComplaint,"complaint Assigned to "+savedComplaint.getAssignedTo().getFullName());
         return ComplaintResponseDto.builder()
                 .assignedStaffName(savedComplaint.getAssignedTo().getFullName())
@@ -249,11 +253,11 @@ complaint.setComplaintPriority(updateComplaintPriorityDto.getComplaintPriority()
     public Page<ComplaintHistoryResponseDto> getComplaintHistory(Long complaintId, Pageable pageable) {
         Complaint complaint=complaintRepo.findById(complaintId).orElseThrow(()-> new RuntimeException("no Complaint Exists With Id : "+complaintId));
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        User staff=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Exists"));
-        boolean isStudent=staff.getFullName().equalsIgnoreCase(complaint.getStudent().getFullName());
-        boolean isStaff=complaint.getAssignedTo()!=null && staff.getFullName().equalsIgnoreCase(complaint.getAssignedTo().getFullName());
+        User currentUser=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Exists"));
+        boolean isStudent=currentUser.getId().equals(complaint.getStudent().getId());
+        boolean isStaff=complaint.getAssignedTo()!=null && currentUser.getId().equals(complaint.getAssignedTo().getId());
 
-        if(!(isStudent || isStaff || staff.getRole()==Role.ROLE_ADMIN)){
+        if(!(isStudent || isStaff || currentUser.getRole()==Role.ROLE_ADMIN)){
             throw new RuntimeException("Access Denied");
         }
         Page<ComplaintHistory> complaintHistories=complaintHistoryRepo.findAllByComplaint(complaint,pageable);
@@ -298,7 +302,7 @@ complaint.setComplaintPriority(updateComplaintPriorityDto.getComplaintPriority()
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
         User staff=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Exists"));
         Complaint complaint=complaintRepo.findById(id).orElseThrow(()->new RuntimeException("No Complaint Exists with id: "+id));
-        if(!complaint.getAssignedTo().getId().equals(staff.getId())){
+        if(complaint.getAssignedTo() == null || !complaint.getAssignedTo().getId().equals(staff.getId())){
             throw new RuntimeException("UnAuthorized Access");
         }
         return ComplaintResponseDto.builder()

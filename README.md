@@ -158,7 +158,7 @@ Database Layer
 
 ### Database
 
-* MySQL
+* PostgreSQL
 
 ### Authentication & Security
 
@@ -285,7 +285,7 @@ Aspiring Full Stack Java Developer
 ---
 ## ⭐ Resume Highlights
 
-* Designed and developed a role-based complaint management platform using Java, Spring Boot, Spring Security, Hibernate, and MySQL.
+* Designed and developed a role-based complaint management platform using Java, Spring Boot, Spring Security, Hibernate, and PostgreSQL.
 * Implemented JWT Authentication, OTP Verification, Password Recovery, and Role-Based Access Control (RBAC).
 * Developed 20+ secure RESTful APIs following industry-standard layered architecture principles.
 * Built complete complaint lifecycle management including creation, assignment, prioritization, status tracking, and resolution workflows.

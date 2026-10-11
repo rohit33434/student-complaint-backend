@@ -4,6 +4,7 @@ import com.example.smartcampus.smartcampus.dtos.CommentRequestDto;
 import com.example.smartcampus.smartcampus.dtos.CommentResponseDto;
 import com.example.smartcampus.smartcampus.entity.Comment;
 import com.example.smartcampus.smartcampus.entity.Complaint;
+import com.example.smartcampus.smartcampus.entity.Role;
 import com.example.smartcampus.smartcampus.entity.User;
 import com.example.smartcampus.smartcampus.repo.CommentRepo;
 import com.example.smartcampus.smartcampus.repo.ComplaintRepo;
@@ -29,6 +30,15 @@ private final CommentRepo commentRepo;
         Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
         User user=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Found"));
         Complaint complaint=complaintRepo.findById(commentRequestDto.getComplaintId()).orElseThrow(()->new RuntimeException("No Complaint Found On Id : "+commentRequestDto.getComplaintId()));
+
+        boolean canAccessComplaint = user.getRole() == Role.ROLE_ADMIN
+                || (complaint.getStudent() != null && user.getId().equals(complaint.getStudent().getId()))
+                || (complaint.getAssignedTo() != null && user.getId().equals(complaint.getAssignedTo().getId()));
+
+        if (!canAccessComplaint) {
+            throw new RuntimeException("Access Denied");
+        }
+
         Comment comment=Comment.builder()
                 .user(user)
                 .complaint(complaint)
@@ -45,7 +55,18 @@ private final CommentRepo commentRepo;
 
     @Override
     public List<CommentResponseDto> getAllCommentsByComplaint(Long id) {
+        Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
+        User user=userRepo.findByEmail(authentication.getName()).orElseThrow(()->new UsernameNotFoundException("User Not Found"));
         Complaint complaint = complaintRepo.findById(id).orElseThrow(() -> new RuntimeException("No Complaint Found with id :" + id));
+
+        boolean canAccessComplaint = user.getRole() == Role.ROLE_ADMIN
+                || (complaint.getStudent() != null && user.getId().equals(complaint.getStudent().getId()))
+                || (complaint.getAssignedTo() != null && user.getId().equals(complaint.getAssignedTo().getId()));
+
+        if (!canAccessComplaint) {
+            throw new RuntimeException("Access Denied");
+        }
+
         List<Comment> comments= commentRepo.findAllByComplaint(complaint);
         if(comments.isEmpty()){
             return new ArrayList<>();

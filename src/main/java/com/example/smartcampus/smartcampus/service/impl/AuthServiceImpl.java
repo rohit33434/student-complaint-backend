@@ -17,6 +17,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,29 +34,57 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final  AuthenticationManager authenticationManager;
     @Override
+    @Transactional
     public String registration(RegisterRequestDto registerRequestDto)  {
-        String email=registerRequestDto.getEmail();
-         if(userRepo.existsByEmail(email)){
-             throw new RuntimeException("User Already Exists");
-         }
-         User user=User.builder()
-                 .email(email)
-                 .password(passwordEncoder.encode(registerRequestDto.getPassword()))
-                 .role(Role.ROLE_STUDENT)
-                 .fullName(registerRequestDto.getFullName())
-                 .phoneNumber(registerRequestDto.getPhoneNumber())
-                 .enabled(false)
-                 .blocked(false)
-                 .build();
-         User savedUser=userRepo.save(user);
-         String otpCode =generateOtp();
-        OtpVerification verification=OtpVerification.builder()
+        String email = registerRequestDto.getEmail();
+        User existingUser = userRepo.findByEmail(email).orElse(null);
+
+        if (existingUser != null) {
+            if (existingUser.isEnabled()) {
+                throw new RuntimeException("User Already Exists");
+            }
+
+            String otpCode = generateOtp();
+            OtpVerification verification = otpVerificationRepo.findByUser(existingUser)
+                    .orElseGet(() -> OtpVerification.builder().user(existingUser).used(false).build());
+            verification.setOtpCode(otpCode);
+            verification.setUsed(false);
+            verification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
+            otpVerificationRepo.save(verification);
+
+            try {
+                emailService.sendOtpEmail(existingUser.getEmail(), otpCode);
+            } catch (RuntimeException ex) {
+                throw new RuntimeException("Unable to send OTP email. Please try again later.", ex);
+            }
+            return "Account pending verification. A new OTP has been sent to your email.";
+        }
+
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(registerRequestDto.getPassword()))
+                .role(Role.ROLE_STUDENT)
+                .fullName(registerRequestDto.getFullName())
+                .phoneNumber(registerRequestDto.getPhoneNumber())
+                .enabled(false)
+                .blocked(false)
+                .build();
+        User savedUser = userRepo.save(user);
+        String otpCode = generateOtp();
+        OtpVerification verification = OtpVerification.builder()
                 .user(savedUser)
                 .used(false)
                 .otpCode(otpCode)
+                .expiryTime(LocalDateTime.now().plusMinutes(5))
                 .build();
         otpVerificationRepo.save(verification);
-        emailService.sendOtpEmail(savedUser.getEmail(),otpCode);
+
+        try {
+            emailService.sendOtpEmail(savedUser.getEmail(), otpCode);
+        } catch (RuntimeException ex) {
+            throw new RuntimeException("Unable to send verification OTP. Please try again later.", ex);
+        }
+
         return "registration Successful.Otp Sent to email";
     }
 private String generateOtp(){
@@ -113,8 +142,14 @@ private String generateOtp(){
         OtpVerification otpVerification=otpVerificationRepo.findByUser(user).orElseThrow(()->new RuntimeException("No User Found"));
         otpVerification.setOtpCode(resetOtp);
         otpVerification.setUsed(false);
+        otpVerification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
         otpVerificationRepo.save(otpVerification);
-        emailService.sendPasswordResetOtp(forgotPasswordRequestDto.getEmail(),resetOtp);
+
+        try {
+            emailService.sendPasswordResetOtp(forgotPasswordRequestDto.getEmail(), resetOtp);
+        } catch (RuntimeException ex) {
+            throw new RuntimeException("Unable to send password reset OTP. Please try again later.", ex);
+        }
         return "Otp Sent Successfully";
     }
 
@@ -134,6 +169,7 @@ private String generateOtp(){
         user.setPassword(passwordEncoder.encode(resetPasswordRequestDto.getNewPassword()));
         userRepo.save(user);
         otpVerification.setUsed(true);
+        otpVerification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
         otpVerificationRepo.save(otpVerification);
         return "Password Changed Successfully";
     }
